@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>משחקון – אוטובוסים בשבת</title>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;700;900&family=Heebo:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Heebo', sans-serif;
+  background: #0c1220;
+  color: #f0ead8;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  overflow: hidden;
+  position: relative;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 80px, rgba(200,151,58,.03) 80px, rgba(200,151,58,.03) 81px),
+    repeating-linear-gradient(90deg, transparent, transparent 80px, rgba(200,151,58,.03) 80px, rgba(200,151,58,.03) 81px);
+  pointer-events: none;
+}
+.glow { position: fixed; width: 600px; height: 600px; border-radius: 50%; filter: blur(120px); pointer-events: none; }
+.glow-a { background: rgba(26,58,107,0.5); top: -200px; right: -100px; }
+.glow-b { background: rgba(200,100,30,0.15); bottom: -200px; left: -100px; }
+.card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  padding: 2.5rem 2rem;
+  max-width: 680px;
+  width: 100%;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+}
+.progress-wrap { display: flex; gap: 6px; margin-bottom: 2rem; }
+.progress-seg { flex: 1; height: 4px; border-radius: 4px; background: rgba(255,255,255,0.1); transition: background 0.4s; }
+.progress-seg.done { background: #c8973a; }
+.progress-seg.current { background: rgba(200,151,58,0.5); }
+.quiz-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+.q-number { font-size: 0.78rem; letter-spacing: 0.25em; text-transform: uppercase; color: #c8973a; }
+.score-badge { background: rgba(200,151,58,0.15); border: 1px solid rgba(200,151,58,0.3); color: #c8973a; border-radius: 100px; padding: 0.3rem 0.9rem; font-size: 0.85rem; font-weight: 600; }
+.question { font-family: 'Frank Ruhl Libre', serif; font-size: clamp(1.2rem, 3vw, 1.55rem); font-weight: 700; line-height: 1.5; margin: 1.2rem 0 1.8rem; min-height: 3.5em; }
+.options { display: flex; flex-direction: column; gap: 0.75rem; }
+.option { padding: 1rem 1.3rem; border: 1.5px solid rgba(255,255,255,0.12); border-radius: 10px; cursor: pointer; font-size: 1rem; line-height: 1.5; transition: all 0.2s; text-align: right; background: rgba(255,255,255,0.02); display: flex; align-items: center; gap: 0.8rem; color: #f0ead8; width: 100%; }
+.option:hover:not(.disabled) { border-color: rgba(200,151,58,0.5); background: rgba(200,151,58,0.07); transform: translateX(-4px); }
+.opt-letter { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 600; color: rgba(255,255,255,0.4); transition: all 0.2s; }
+.option:hover:not(.disabled) .opt-letter { border-color: #c8973a; color: #c8973a; }
+.option.correct { border-color: #4ade80; background: rgba(74,222,128,0.1); }
+.option.correct .opt-letter { border-color: #4ade80; color: #4ade80; background: rgba(74,222,128,0.15); }
+.option.wrong { border-color: #f87171; background: rgba(248,113,113,0.1); }
+.option.wrong .opt-letter { border-color: #f87171; color: #f87171; background: rgba(248,113,113,0.15); }
+.option.disabled { cursor: default; pointer-events: none; }
+.explanation { margin-top: 1.2rem; padding: 1rem 1.2rem; border-radius: 10px; font-size: 0.92rem; line-height: 1.6; color: rgba(240,234,216,0.85); display: none; }
+.explanation.show { display: block; }
+.explanation.correct-exp { background: rgba(74,222,128,0.07); border: 1px solid rgba(74,222,128,0.2); }
+.explanation.wrong-exp { background: rgba(248,113,113,0.07); border: 1px solid rgba(248,113,113,0.2); }
+.next-btn { margin-top: 1.5rem; width: 100%; padding: 1rem; background: linear-gradient(135deg, #c8973a, #a0731d); border: none; border-radius: 10px; color: #0c1220; font-family: 'Frank Ruhl Libre', serif; font-size: 1.1rem; font-weight: 700; cursor: pointer; display: none; transition: transform 0.2s, box-shadow 0.2s; }
+.next-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(200,151,58,0.35); }
+.next-btn.show { display: block; }
+.results { display: none; text-align: center; }
+.results.show { display: block; }
+.result-emoji { font-size: 4rem; margin-bottom: 1rem; }
+.result-title { font-family: 'Frank Ruhl Libre', serif; font-size: 2.2rem; font-weight: 900; margin-bottom: 0.5rem; }
+.result-score { font-size: 3.5rem; font-weight: 700; color: #c8973a; margin: 1rem 0; font-family: 'Frank Ruhl Libre', serif; }
+.result-msg { color: rgba(240,234,216,0.65); font-size: 1rem; line-height: 1.7; margin-bottom: 2rem; font-weight: 300; }
+.result-breakdown { display: flex; gap: 1rem; justify-content: center; margin-bottom: 2rem; flex-wrap: wrap; }
+.rb-item { padding: 0.7rem 1.2rem; border-radius: 8px; font-size: 0.9rem; }
+.rb-item.c { background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.3); color: #4ade80; }
+.rb-item.w { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); color: #f87171; }
+.restart-btn { padding: 0.9rem 2.5rem; border: 1.5px solid #c8973a; background: transparent; color: #c8973a; border-radius: 8px; font-family: 'Frank Ruhl Libre', serif; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.restart-btn:hover { background: #c8973a; color: #0c1220; }
+.confetti-dot { position: fixed; border-radius: 2px; pointer-events: none; animation: cf linear forwards; }
+@keyframes cf { 0%{transform:translateY(-20px) rotate(0);opacity:1} 100%{transform:translateY(100vh) rotate(720deg);opacity:0} }
+</style>
+</head>
+<body>
+<div class="glow glow-a"></div>
+<div class="glow glow-b"></div>
+<div class="card">
+  <div id="quizArea">
+    <div class="progress-wrap" id="pw"></div>
+    <div class="quiz-header">
+      <span class="q-number" id="qn"></span>
+      <span class="score-badge" id="sb">&#11088; 0</span>
+    </div>
+    <div class="question" id="qt"></div>
+    <div class="options" id="oa"></div>
+    <div class="explanation" id="exp"></div>
+    <button class="next-btn" id="nb" onclick="next()"></button>
+  </div>
+  <div class="results" id="res">
+    <div class="result-emoji" id="re"></div>
+    <div class="result-title" id="rt"></div>
+    <div class="result-score" id="rs"></div>
+    <div class="result-msg" id="rm"></div>
+    <div class="result-breakdown" id="rb"></div>
+    <button class="restart-btn" onclick="init()">&#128260; שחק שוב</button>
+  </div>
+</div>
+<script>
+var Q=[
+  {
+    q:"מהי הסיבה העיקרית לכך שיש אנשים התומכים בהפעלת אוטובוסים בשבת?",
+    o:["לאפשר גם לאנשים ללא רכב פרטי להתנייד","הורדת מחירי הדלק","הפחתת מספר הנהגים בכביש","שיפור הנגישות לתחבורה עבור עוד אנשים"],
+    c:0,
+    e:"ברוב ערי ישראל התחבורה הציבורית מושבתת בשבת, ולכן מי שאין לו רכב פרטי – כמו צעירים, קשישים ואנשים ממעמד חברתי-כלכלי נמוך – מתקשה להתנייד."
+  },
+  {
+    q:"מה ההשפעה הסביבתית האפשרית כאשר אין תחבורה ציבורית בשבת?",
+    o:["יותר אנשים משתמשים ברכב פרטי, מה שמגדיל את זיהום האוויר","כל האנשים עוברים להשתמש רק באופניים","אין כלל שינוי במספר כלי הרכב על הכביש","כל הכבישים נסגרים לתנועה בשבת"],
+    c:0,
+    e:"בהיעדר תחבורה ציבורית, יותר אנשים נוסעים ברכב פרטי – מה שמגדיל משמעותית את זיהום האוויר ואת הסיכון לתאונות דרכים."
+  },
+  {
+    q:"מה הטיעון המרכזי של המתנגדים להפעלת אוטובוסים בשבת?",
+    o:["הדבר יגרום לעומסי תנועה גדולים יותר בכבישים","פחות אנשים יבחרו להשתמש בתחבורה ציבורית","הדבר עלול לפגוע בצביון היהודי ובקדושת השבת","הדבר עלול לגרום לעלייה במחירי כרטיסי האוטובוס"],
+    c:2,
+    e:"המתנגדים טוענים שהשבת היא נכס לאומי ותרבותי ייחודי, והפעלת תחבורה ממשלתית ביום זה פוגעת בצביון המיוחד שלו."
+  },
+  {
+    q:"מהו הפתרון שאותו אנחנו מציעים לסוגיה?",
+    o:["לאפשר לכל עיר להחליט לפי אופי האוכלוסייה שלה","להפעיל תחבורה בכל הערים ללא יוצא מן הכלל","להפעיל תחבורה ציבורית בשבת רק בערים גדולות","להשאיר את המצב כפי שהוא כיום בכל הארץ"],
+    c:0,
+    e:"הפתרון המוצע הוא אוטונומיה מקומית – כל עיר תחליט לפי אופי אוכלוסייתה, מבלי לכפות פתרון אחיד על כלל הארץ."
+  },
+  {
+    q:"מדוע הפעלת אוטובוסים בשבת אינה צפויה לפגוע בשומרי שבת?",
+    o:["משום שהפעלת התחבורה הציבורית לא תשנה את חוקי השבת עבור מי שבוחר לשמור אותה","משום שהאוטובוסים יפעלו בעיקר בערים או אזורים חילוניים שבהם התושבים מעוניינים בכך","משום שהפעלת האוטובוסים אינה מחייבת אף אדם לנסוע בהם בשבת","משום שהפעלת התחבורה הציבורית תהיה מוגבלת למספר קווים בלבד"],
+    c:1,
+    e:"חופש הבחירה פועל לשני הכיוונים: מי שרוצה לנסוע – יכול. מי שבוחר לשמור שבת – אינו מחויב כלל להשתמש בתחבורה הציבורית."
+  }
+];
+var cur=0,score=0,ans=[];
+
+function shuffle(arr){
+  for(var i=arr.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=arr[i];arr[i]=arr[j];arr[j]=t;}
+  return arr;
+}
+function init(){
+  cur=0;score=0;ans=[];
+  document.getElementById('quizArea').style.display='block';
+  document.getElementById('res').classList.remove('show');
+  var pw=document.getElementById('pw');
+  pw.innerHTML='';
+  Q.forEach(function(_,i){var s=document.createElement('div');s.className='progress-seg';s.id='s'+i;pw.appendChild(s);});
+  show();
+}
+function show(){
+  Q.forEach(function(_,i){
+    var s=document.getElementById('s'+i);
+    s.className='progress-seg'+(i<cur?' done':i===cur?' current':'');
+  });
+  var q=Q[cur];
+  document.getElementById('qn').textContent='שאלה '+(cur+1)+' מתוך '+Q.length;
+  document.getElementById('sb').textContent='\u2B50 '+score;
+  document.getElementById('qt').textContent=q.q;
+  document.getElementById('exp').className='explanation';
+  document.getElementById('exp').textContent='';
+  document.getElementById('nb').className='next-btn';
+  var oa=document.getElementById('oa');
+  oa.innerHTML='';
+  var L=['\u05D0','\u05D1','\u05D2','\u05D3'];
+  var indices=shuffle([0,1,2,3]);
+  var correctNewIdx=indices.indexOf(q.c);
+  indices.forEach(function(origIdx,newIdx){
+    var b=document.createElement('button');
+    b.className='option';
+    b.innerHTML='<span class="opt-letter">'+L[newIdx]+'</span><span>'+q.o[origIdx]+'</span>';
+    (function(ni){b.addEventListener('click',function(){pick(ni,b,correctNewIdx);});})(newIdx);
+    oa.appendChild(b);
+  });
+}
+function pick(idx,btn,correctIdx){
+  var q=Q[cur];
+  document.querySelectorAll('.option').forEach(function(o){o.classList.add('disabled');});
+  var ok=idx===correctIdx;
+  if(ok){btn.classList.add('correct');score++;document.getElementById('sb').textContent='\u2B50 '+score;}
+  else{btn.classList.add('wrong');document.querySelectorAll('.option')[correctIdx].classList.add('correct');}
+  ans.push(ok);
+  var e=document.getElementById('exp');
+  e.textContent=q.e;
+  e.className='explanation show '+(ok?'correct-exp':'wrong-exp');
+  var nb=document.getElementById('nb');
+  nb.className='next-btn show';
+  nb.textContent=cur<Q.length-1?'\u05DC\u05E9\u05D0\u05DC\u05D4 \u05D4\u05D1\u05D0\u05D4 \u2190':'\u05DC\u05EA\u05D5\u05E6\u05D0\u05D5\u05EA \uD83C\uDFC1';
+}
+function next(){
+  cur++;
+  if(cur<Q.length){show();}else{results();}
+}
+function results(){
+  document.getElementById('quizArea').style.display='none';
+  document.getElementById('res').classList.add('show');
+  var pct=Math.round(score/Q.length*100);
+  var em,ti,ms;
+  if(pct===100){em='\uD83C\uDFC6';ti='\u05DB\u05DC \u05D4\u05DB\u05D1\u05D5\u05D3!';ms='\u05D6\u05DB\u05E8\u05D5\u05E0\u05DD \u05DE\u05D5\u05E9\u05DC\u05DD – \u05D4\u05D8\u05D9\u05E2\u05D5\u05E0\u05D9\u05DD \u05E0\u05E9\u05D0\u05E8\u05D5 \u05D0\u05D9\u05EA\u05DB\u05DD!';confetti();}
+  else if(pct>=71){em='\uD83C\uDFAF';ti='\u05D9\u05E4\u05D4 \u05DE\u05D0\u05D5\u05D3!';ms='\u05D4\u05D1\u05E0\u05EA\u05DD \u05D0\u05EA \u05E8\u05D5\u05D1 \u05D4\u05D7\u05D5\u05DE\u05E8. \u05E9\u05D3\u05E8\u05D2\u05D5 \u05E2\u05DC \u05D4\u05E0\u05E7\u05D5\u05D3\u05D5\u05EA \u05E9\u05D4\u05D7\u05DE\u05E6\u05EA\u05DD.';}
+  else if(pct>=43){em='\uD83E\uDD14';ti='\u05DC\u05D0 \u05E8\u05E2!';ms='\u05D9\u05E9 \u05E2\u05D5\u05D3 \u05DE\u05D4 \u05DC\u05D6\u05DB\u05D5\u05E8 \u05DE\u05D4\u05D3\u05D9\u05D5\u05DF. \u05E0\u05E1\u05D5 \u05E9\u05D5\u05D1!';}
+  else{em='\uD83D\uDE0C';ti='\u05E0\u05E1\u05D5 \u05E9\u05D5\u05D1!';ms='\u05D4\u05D8\u05D9\u05E2\u05D5\u05E0\u05D9\u05DD \u05D4\u05D9\u05D5 \u05E9\u05DD. \u05E0\u05E1\u05D5 \u05E9\u05D5\u05D1 \u05D5\u05EA\u05E7\u05E0\u05D5!';}
+  document.getElementById('re').textContent=em;
+  document.getElementById('rt').textContent=ti;
+  document.getElementById('rs').textContent=score+' / '+Q.length;
+  document.getElementById('rm').textContent=ms;
+  var c=ans.filter(Boolean).length;
+  document.getElementById('rb').innerHTML='<div class="rb-item c">\u2713 '+c+' \u05E0\u05DB\u05D5\u05DF</div><div class="rb-item w">\u2717 '+(ans.length-c)+' \u05E9\u05D2\u05D5\u05D9</div>';
+}
+function confetti(){
+  var cl=['#c8973a','#4ade80','#f87171','#60a5fa','#f0ead8'];
+  for(var i=0;i<60;i++){(function(i){setTimeout(function(){
+    var e=document.createElement('div');
+    e.className='confetti-dot';
+    e.style.cssText='left:'+(Math.random()*100)+'vw;top:-10px;background:'+cl[Math.floor(Math.random()*cl.length)]+';width:'+(5+Math.random()*8)+'px;height:'+(5+Math.random()*8)+'px;animation-duration:'+(1.5+Math.random()*2)+'s;animation-delay:'+(Math.random()*0.5)+'s;';
+    document.body.appendChild(e);
+    setTimeout(function(){e.remove();},3500);
+  },i*40);})(i);}
+}
+init();
+</script>
+</body>
+</html>
